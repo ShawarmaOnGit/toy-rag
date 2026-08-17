@@ -4,10 +4,14 @@ from rag.data.sample_chunks import SAMPLE_CHUNKS
 
 from openai import OpenAI
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
 client = OpenAI()
 EMBEDDING_MODEL = "text-embedding-3-small"
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def embed_ingestion(chunks: list[Chunk]) -> np.ndarray:
@@ -30,6 +34,8 @@ def embed_ingestion(chunks: list[Chunk]) -> np.ndarray:
 
     assert embeddings.shape == (len(chunks), 1536), \
         f"Embeddings is not in the right shape. Current shape: {embeddings.shape}"
+
+    logger.info(f"Total tokens used: {response.usage.total_tokens}")
 
     return embeddings
 
