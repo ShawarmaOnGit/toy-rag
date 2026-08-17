@@ -1,5 +1,6 @@
 import numpy as np
 from rag.models.chunk import Chunk
+from rag.data.sample_chunks import SAMPLE_CHUNKS
 
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -10,6 +11,9 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 
 
 def embed_ingestion(chunks: list[Chunk]) -> np.ndarray:
+    if not chunks:
+        raise ValueError("Chunks cannot be empty!")
+
     response = client.embeddings.create(
         model=EMBEDDING_MODEL,
         input=[chunk.text for chunk in chunks]
@@ -31,6 +35,9 @@ def embed_ingestion(chunks: list[Chunk]) -> np.ndarray:
 
 
 def embed_query(query: str) -> np.ndarray:
+    if not query.strip():
+        raise ValueError("Query cannot be empty!")
+
     response = client.embeddings.create(
         model=EMBEDDING_MODEL,
         input=query
@@ -42,3 +49,10 @@ def embed_query(query: str) -> np.ndarray:
         f"Embedding is not in the right shape. Current shape: {embedding.shape}"
 
     return embedding
+
+
+if __name__ == "__main__":
+    embeddings = embed_ingestion(SAMPLE_CHUNKS)
+    print(f"Embeddings shape: {embeddings.shape}")
+    print(f"\nNumber of chunks: {len(SAMPLE_CHUNKS)}")
+    print(f"\nFirst few values of first chunk: {embeddings[0][:5]}")
