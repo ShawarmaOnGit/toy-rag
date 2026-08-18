@@ -1,7 +1,8 @@
-from rag.operations.retrieval import retrieve
-from rag.operations.embedding import embed_ingestion, embed_query
-from rag.operations.prompting import build_prompt
+from openai import OpenAIError
+
+from rag.operations.embedding import embed_ingestion
 from rag.data.sample_chunks import SAMPLE_CHUNKS
+from rag.pipeline import answer_question
 
 def main():
     questions = [
@@ -9,35 +10,27 @@ def main():
         "How many days do I have to request a regrade?",
         "Can I work with other students on take-home assignments?",
         "What is the policy for requesting an incomplete grade?",
+        "How long is a standard semester?"
     ]
 
     embedded_chunks = embed_ingestion(SAMPLE_CHUNKS)
 
     for question in questions:
-        query = embed_query(question)
-        results = retrieve(
-            query=query,
-            embedded_chunks=embedded_chunks,
-            chunks=SAMPLE_CHUNKS,
-            top_k=3
-        )
+        print(f"\n\n\nQuestion: {question}")
 
-        prompt = build_prompt(question, results)
-        print(prompt)
-        print(f"\n----- Length of prompt: {len(prompt)} -----\n")
-        assert all(r.chunk.text in prompt for r in results)
-        assert all(r.chunk.filename in prompt for r in results)
-        assert all(str(r.chunk.page) in prompt for r in results)
-        assert question in prompt
-        assert prompt.index(question) > prompt.index(results[0].chunk.text)   # question last
+        try:
+            answer = answer_question(question, embedded_chunks, SAMPLE_CHUNKS, 3)
+        except OpenAIError as e:
+            print(f"[API ERROR] question skipped: {e}")
+            continue
 
-        labels = [f"Source {r.rank}" for r in results]
-        assert len(set(labels)) == len(labels)                          # unique labels
-
-        assert all(str(round(r.score, 2)) not in prompt for r in results)  # no score leak
-
-        empty_prompt = build_prompt("Any question", [])
-        assert "Any question" in empty_prompt
+        print(f"\nAnswer: {answer.answer}")
+        print(f"\nSources:")
+        for source in answer.sources:
+            print(
+                f"[Source {source.rank}: {source.chunk.filename}, Page {source.chunk.page}] "
+                f"Score: {source.score:.3f}"
+            )
 
 
 if __name__ == "__main__":
