@@ -1,7 +1,9 @@
+from pathlib import Path
 from openai import OpenAIError
 
 from rag.operations.embedding import embed_ingestion
-from rag.data.sample_chunks import SAMPLE_CHUNKS
+from rag.operations.extraction import extract_directory, clean_pages
+from rag.operations.chunking import chunk_pages
 from rag.pipeline import answer_question
 
 def main():
@@ -13,13 +15,15 @@ def main():
         "How long is a standard semester?"
     ]
 
-    embedded_chunks = embed_ingestion(SAMPLE_CHUNKS)
+    pages = clean_pages(extract_directory(Path("rag/data/pdfs")))
+    chunks = chunk_pages(pages)
+    embedded_chunks = embed_ingestion(chunks)
 
     for question in questions:
         print(f"\n\n\nQuestion: {question}")
 
         try:
-            answer = answer_question(question, embedded_chunks, SAMPLE_CHUNKS, 3)
+            answer = answer_question(question, embedded_chunks, chunks, 3)
         except OpenAIError as e:
             print(f"[API ERROR] question skipped: {e}")
             continue
